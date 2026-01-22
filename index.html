@@ -25,6 +25,7 @@
   </header>
 
   <main class="wrap">
+    <!-- IDENTIFIKACE -->
     <section class="card">
       <div class="card-h">
         <h2>Identifikace</h2>
@@ -54,6 +55,7 @@
       </div>
     </section>
 
+    <!-- PŘED SMĚNOU -->
     <section class="card">
       <div class="card-h">
         <h2>Před směnou</h2>
@@ -76,19 +78,15 @@
       <div class="hint" id="startHint"></div>
     </section>
 
-    <section class="card">
-      <div class="card-h">
-        <h2>Během směny</h2>
-        <div class="small">👀 rychlá sebekontrola</div>
-      </div>
-      <div class="checks" id="during"></div>
-    </section>
-
+    <!-- PO SMĚNĚ -->
     <section class="card">
       <div class="card-h">
         <h2>Po směně</h2>
         <div class="small">🧾 finance + zápis</div>
       </div>
+
+      <h3>Ukončení směny</h3>
+      <div class="checks" id="post"></div>
 
       <div class="grid2">
         <label class="field">
@@ -119,7 +117,7 @@
       <details class="advanced">
         <summary>Napojení na sběr dat (Google Sheets / API)</summary>
         <p class="small">
-          Sem vlož URL endpointu (např. Google Apps Script Web App). Bez toho se data ukládají lokálně do telefonu.
+          Vlož URL endpointu (např. Google Apps Script Web App). Bez toho se data ukládají lokálně do telefonu.
         </p>
         <label class="field">
           <span>Endpoint URL</span>
@@ -134,6 +132,7 @@
       <div class="toast" id="toast" aria-live="polite"></div>
     </section>
 
+    <!-- HISTORIE -->
     <section class="card subtle">
       <div class="card-h">
         <h2>Historie v telefonu</h2>

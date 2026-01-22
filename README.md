@@ -1,7 +1,7 @@
 # RB Taxi – Checklist (PWA)
 
 ## Co to umí
-- Mobilní checklist pro řidiče (před/během/po směně)
+- Mobilní checklist pro řidiče (před/po směně)
 - Offline režim (Service Worker + cache)
 - Ukládání historie do telefonu (LocalStorage)
 - Export historie do CSV
@@ -28,3 +28,7 @@ Pokud chceš, napíšu ti i hotový Apps Script + šablonu Google Sheet (řádky
 
 ## Stav položek (OK / Není v pořádku)
 Každá položka má volbu **✓ OK** nebo **✕ Není v pořádku**. Ukládá se jako `ok` / `nok`.
+
+
+## Poznámka
+Tato verze obsahuje opravený `app.js` (v7). Ukládání do telefonu + export CSV fungují.
