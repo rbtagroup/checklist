@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1220" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>RB Taxi – Checklist</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">RB</div>
+      <div>
+        <div class="title">RB Taxi</div>
+        <div class="subtitle">Denní mobilní checklist</div>
+      </div>
+    </div>
+    <button id="installBtn" class="btn ghost" hidden>Přidat na plochu</button>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <div class="card-h">
+        <h2>Identifikace</h2>
+        <div class="pill" id="todayPill"></div>
+      </div>
+
+      <div class="grid2">
+        <label class="field">
+          <span>Řidič</span>
+          <input id="driver" placeholder="Jméno / přezdívka" autocomplete="name" />
+        </label>
+        <label class="field">
+          <span>Vozidlo (RZ / označení)</span>
+          <input id="vehicle" placeholder="např. 1B2 3456 / Tesla 3" />
+        </label>
+      </div>
+
+      <div class="grid2">
+        <label class="field">
+          <span>Začátek směny</span>
+          <input id="shiftStart" type="time" />
+        </label>
+        <label class="field">
+          <span>Konec směny</span>
+          <input id="shiftEnd" type="time" />
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-h">
+        <h2>Před směnou</h2>
+        <div class="small">✅ udělej to rychle (30–60 s)</div>
+      </div>
+
+      <h3>Vozidlo</h3>
+      <div class="checks" id="pre_vehicle"></div>
+
+      <h3>Povinná výbava</h3>
+      <div class="checks" id="pre_equipment"></div>
+
+      <h3>Taxi technika</h3>
+      <div class="checks" id="pre_tech"></div>
+
+      <div class="actions">
+        <button class="btn" id="btnStart">ZAČÍT SMĚNU</button>
+        <button class="btn ghost" id="btnSave1">Uložit rozpracované</button>
+      </div>
+      <div class="hint" id="startHint"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-h">
+        <h2>Během směny</h2>
+        <div class="small">👀 rychlá sebekontrola</div>
+      </div>
+      <div class="checks" id="during"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-h">
+        <h2>Po směně</h2>
+        <div class="small">🧾 finance + zápis</div>
+      </div>
+
+      <div class="grid2">
+        <label class="field">
+          <span>Stav km – začátek</span>
+          <input id="kmStart" inputmode="numeric" placeholder="např. 123456" />
+        </label>
+        <label class="field">
+          <span>Stav km – konec</span>
+          <input id="kmEnd" inputmode="numeric" placeholder="např. 123789" />
+        </label>
+      </div>
+
+      <h3>Závady dnes</h3>
+      <label class="field">
+        <textarea id="issues" placeholder="Co je špatně? (např. pískání brzd, žárovka, hláška na palubce…)"></textarea>
+      </label>
+
+      <h3>Incident</h3>
+      <label class="field">
+        <textarea id="incident" placeholder="Nehoda / konflikt / kontrola / ztracené věci… stručně a jasně"></textarea>
+      </label>
+
+      <div class="actions">
+        <button class="btn" id="btnSubmit">ODESLAT & UKONČIT SMĚNU</button>
+        <button class="btn ghost" id="btnSave2">Uložit rozpracované</button>
+      </div>
+
+      <details class="advanced">
+        <summary>Napojení na sběr dat (Google Sheets / API)</summary>
+        <p class="small">
+          Sem vlož URL endpointu (např. Google Apps Script Web App). Bez toho se data ukládají lokálně do telefonu.
+        </p>
+        <label class="field">
+          <span>Endpoint URL</span>
+          <input id="endpoint" placeholder="https://script.google.com/macros/s/....../exec" />
+        </label>
+        <div class="actions">
+          <button class="btn ghost" id="btnTest">Otestovat odeslání</button>
+        </div>
+        <p class="small" id="endpointStatus"></p>
+      </details>
+
+      <div class="toast" id="toast" aria-live="polite"></div>
+    </section>
+
+    <section class="card subtle">
+      <div class="card-h">
+        <h2>Historie v telefonu</h2>
+        <div class="small">📦 offline archiv</div>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" id="btnExport">Export CSV</button>
+        <button class="btn danger" id="btnClear">Smazat historii</button>
+      </div>
+      <div class="list" id="history"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+    }
+  </script>
+</body>
+</html>
