@@ -32,3 +32,12 @@ Každá položka má volbu **✓ OK** nebo **✕ Není v pořádku**. Ukládá s
 
 ## Poznámka
 Tato verze obsahuje opravený `app.js` (v7). Ukládání do telefonu + export CSV fungují.
+
+
+## Změny v10
+- Zachována podoba/funkčnost v8
+- SPZ výběr jen z pevného seznamu
+- Převzato po (řidič) + poznámka
+- Odebráno: Navigace funkční
+- Historie zobrazuje NEOK položky
+- Export: PDF (tisk do PDF)

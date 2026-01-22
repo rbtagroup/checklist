@@ -38,10 +38,28 @@
           <input id="driver" placeholder="Jméno / přezdívka" autocomplete="name" />
         </label>
         <label class="field">
-          <span>Vozidlo (RZ / označení)</span>
-          <input id="vehicle" placeholder="např. 1B2 3456 / Tesla 3" />
+          <span>Vozidlo (SPZ)</span>
+          <select id="vehicle" class="select">
+            <option value="">Vyber SPZ…</option>
+            <option value="2BY5398">2BY5398</option>
+            <option value="1BU0299">1BU0299</option>
+            <option value="1BU0060">1BU0060</option>
+            <option value="2BL8995">2BL8995</option>
+            <option value="2BT1565">2BT1565</option>
+          </select>
+        </label>
+      
+      <div class="grid2">
+        <label class="field">
+          <span>Převzato po (řidič)</span>
+          <input id="takenFrom" placeholder="Jméno / přezdívka" list="driversList" />
+        </label>
+        <label class="field">
+          <span>Poznámka převzetí</span>
+          <input id="handoverNote" placeholder="např. bez závad / předáno s výhradou…" />
         </label>
       </div>
+</div>
 
       <div class="grid2">
         <label class="field">
@@ -53,7 +71,14 @@
           <input id="shiftEnd" type="time" />
         </label>
       </div>
-    </section>
+    
+      <datalist id="driversList">
+        <option value="Romana">
+        <option value="Miriam">
+        <option value="Jakub">
+        <option value="Lukáš">
+      </datalist>
+</section>
 
     <!-- PŘED SMĚNOU -->
     <section class="card">
@@ -139,7 +164,7 @@
         <div class="small">📦 offline archiv</div>
       </div>
       <div class="actions">
-        <button class="btn ghost" id="btnExport">Export CSV</button>
+        <button class="btn ghost" id="btnExport">Export PDF</button>
         <button class="btn danger" id="btnClear">Smazat historii</button>
       </div>
       <div class="list" id="history"></div>

@@ -27,7 +27,6 @@ const lists = {
   pre_tech: [
     { id:"app",      t:"Taxi aplikace funkční",    s:"Přihlášení + data." },
     { id:"terminal", t:"Platební terminál OK",     s:"Baterie + signál." },
-    { id:"nav",      t:"Navigace funkční",         s:"GPS + data." },
     { id:"charger",  t:"Nabíječka v autě",         s:"Kabel + držák." }
   ],
   post: [
@@ -149,6 +148,8 @@ function getForm(){
     ts: new Date().toISOString(),
     driver: ($("driver")?.value || "").trim(),
     vehicle: ($("vehicle")?.value || "").trim(),
+    takenFrom: ($("takenFrom")?.value || "").trim(),
+    handoverNote: ($("handoverNote")?.value || "").trim(),
     shiftStart: $("shiftStart")?.value || "",
     shiftEnd: $("shiftEnd")?.value || "",
     kmStart: ($("kmStart")?.value || "").trim(),
@@ -175,6 +176,8 @@ function setForm(data){
   if (!data) return;
   if ($("driver")) $("driver").value = data.driver || "";
   if ($("vehicle")) $("vehicle").value = data.vehicle || "";
+  if ($("takenFrom")) $("takenFrom").value = data.takenFrom || "";
+  if ($("handoverNote")) $("handoverNote").value = data.handoverNote || "";
   if ($("shiftStart")) $("shiftStart").value = data.shiftStart || "";
   if ($("shiftEnd")) $("shiftEnd").value = data.shiftEnd || "";
   if ($("kmStart")) $("kmStart").value = data.kmStart || "";
@@ -222,10 +225,14 @@ function clearChecks(){
   });
 }
 
+const ALLOWED_PLATES = ["2BY5398","1BU0299","1BU0060","2BL8995","2BT1565"];
+
 function validate(payload){
   const errors = [];
   if (!payload.driver) errors.push("Doplň Řidič.");
-  if (!payload.vehicle) errors.push("Doplň Vozidlo.");
+  if (!payload.vehicle) errors.push("Vyber SPZ vozidla.");
+  if (payload.vehicle && !ALLOWED_PLATES.includes(payload.vehicle)) errors.push("Neplatná SPZ.");
+  if (!payload.takenFrom) errors.push("Doplň: Převzato po (řidič).");
 
   const isBadNum = (v) => v && !/^\d+$/.test(v);
   if (isBadNum(payload.kmStart)) errors.push("Stav km – začátek má být číslo.");
@@ -261,17 +268,35 @@ function renderHistory(){
     div.className = "item";
 
     const km = (it.kmStart && it.kmEnd) ? `km ${it.kmStart} → ${it.kmEnd}` : "km nezadané";
-    const nokCount = (() => {
-      const all = Object.assign({}, it.checks?.pre_vehicle, it.checks?.pre_equipment, it.checks?.pre_tech, it.checks?.post);
-      return Object.values(all || {}).filter(v => v === "nok").length;
-    })();
+
+    const nokLines = [];
+    for (const [k, arr] of Object.entries(lists)){
+      for (const item of arr){
+        const st = it.checks?.[k]?.[item.id] ?? null;
+        if (st === "nok"){
+          const note = it.notes?.[k]?.[item.id] || "";
+          nokLines.push(`• ${item.t}${note ? " — " + escapeHtml(note) : ""}`);
+        }
+      }
+    }
 
     div.innerHTML = `
       <div class="row">
-        <div><strong>${it.date}</strong> • ${escapeHtml(it.driver)} • ${escapeHtml(it.vehicle)}</div>
+        <div><strong>${it.date}</strong> • ${escapeHtml(it.driver)} • <strong>${escapeHtml(it.vehicle)}</strong></div>
         <div class="small">${new Date(it.ts).toLocaleString("cs-CZ")}</div>
       </div>
-      <div class="meta">${km} • ✕: ${nokCount} • závady: ${it.issues ? "ano" : "ne"} • incident: ${it.incident ? "ano" : "ne"}</div>
+      <div class="meta">
+        převzato po: <strong>${escapeHtml(it.takenFrom || "—")}</strong>
+        ${it.handoverNote ? ` • pozn.: ${escapeHtml(it.handoverNote)}` : ""}
+        • ${km}
+        • ✕: <strong>${nokLines.length}</strong>
+      </div>
+      ${nokLines.length ? `
+        <details class="mini">
+          <summary class="small">Zobrazit NEOK položky</summary>
+          <div class="small" style="margin-top:6px;line-height:1.35">${nokLines.join("<br>")}</div>
+        </details>
+      ` : `<div class="small">Vše OK.</div>`}
     `;
     list.appendChild(div);
   }
@@ -442,12 +467,88 @@ $("btnTest")?.addEventListener("click", async () => {
   }
 });
 
+
+function buildPrintableHTML(record){
+  const sections = [
+    ["Vozidlo (SPZ)", record.vehicle || ""],
+    ["Řidič", record.driver || ""],
+    ["Převzato po", record.takenFrom || ""],
+    ["Poznámka převzetí", record.handoverNote || ""],
+    ["Začátek směny", record.shiftStart || ""],
+    ["Konec směny", record.shiftEnd || ""],
+    ["Km start", record.kmStart || ""],
+    ["Km konec", record.kmEnd || ""],
+    ["Závady dnes", record.issues || ""],
+    ["Incident", record.incident || ""],
+  ];
+
+  const statusLabel = (v)=> v==="ok" ? "OK" : (v==="nok" ? "NEOK" : "NEVYPLNĚNO");
+  const statusClass = (v)=> v==="ok" ? "stOk" : (v==="nok" ? "stNok" : "stEmpty");
+
+  const groupTitles = {
+    pre_vehicle: "Před směnou – Vozidlo",
+    pre_equipment: "Před směnou – Povinná výbava",
+    pre_tech: "Před směnou – Taxi technika",
+    post: "Po směně – Ukončení směny"
+  };
+
+  let checksHtml = "";
+  for (const [k, arr] of Object.entries(lists)){
+    checksHtml += `<h3>${groupTitles[k] || k}</h3><table class="tbl"><thead><tr><th>Položka</th><th>Stav</th><th>Popis při ✕</th></tr></thead><tbody>`;
+    for (const it of arr){
+      const st = record.checks?.[k]?.[it.id] ?? null;
+      const note = record.notes?.[k]?.[it.id] || "";
+      checksHtml += `<tr>
+        <td>${escapeHtml(it.t)}</td>
+        <td class="${statusClass(st)}">${statusLabel(st)}</td>
+        <td>${escapeHtml(note)}</td>
+      </tr>`;
+    }
+    checksHtml += `</tbody></table>`;
+  }
+
+  const metaRows = sections
+    .filter(([_,v])=>String(v||"").trim()!=="")
+    .map(([k,v])=>`<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(String(v))}</td></tr>`)
+    .join("");
+
+  return `<!doctype html>
+  <html lang="cs"><head><meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>RB Taxi – Checklist – ${escapeHtml(record.vehicle||"")}</title>
+  <style>
+    body{font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif; padding:24px; color:#111;}
+    h1{margin:0 0 6px;}
+    .sub{color:#555; margin:0 0 18px;}
+    table{border-collapse:collapse; width:100%; margin:10px 0 18px;}
+    th,td{border:1px solid #ddd; padding:8px; vertical-align:top; font-size:12px;}
+    th{background:#f6f6f6; text-align:left; width:220px;}
+    .tbl th{width:auto;}
+    .stOk{background:#e9f9ef;}
+    .stNok{background:#fdecec;}
+    .stEmpty{background:#f3f4f6; color:#555;}
+    @media print{ body{padding:0;} }
+  </style></head>
+  <body>
+    <h1>RB Taxi – Denní checklist</h1>
+    <p class="sub">${escapeHtml(record.date||"")} • ${escapeHtml(new Date(record.ts).toLocaleString("cs-CZ"))}</p>
+    <h3>Identifikace</h3>
+    <table><tbody>${metaRows}</tbody></table>
+    ${checksHtml}
+  </body></html>`;
+}
+
 $("btnExport")?.addEventListener("click", () => {
   const items = loadHistory();
   if (!items.length){ toast("Nic k exportu."); return; }
-  const csv = toCSV(items);
-  download(`rb_checklist_${todayStr().replace(/\./g,'-')}.csv`, csv);
-  toast("Export CSV hotový.");
+  const latest = items[items.length - 1];
+  const w = window.open("", "_blank");
+  if (!w){ toast("Povol pop-up okna pro export PDF."); return; }
+  w.document.open();
+  w.document.write(buildPrintableHTML(latest));
+  w.document.close();
+  setTimeout(()=> { w.focus(); w.print(); }, 350);
+  toast("Otevřeno pro tisk / uložit jako PDF.");
 });
 
 $("btnClear")?.addEventListener("click", () => {
