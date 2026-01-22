@@ -25,11 +25,39 @@
   </header>
 
   <main class="wrap">
+    <section class="card">
+      <div class="card-h">
+        <h2>Identifikace</h2>
+        <div class="pill" id="todayPill"></div>
+      </div>
+
+      <div class="grid2">
+        <label class="field">
+          <span>Řidič</span>
+          <input id="driver" placeholder="Jméno / přezdívka" autocomplete="name" />
+        </label>
+        <label class="field">
+          <span>Vozidlo (RZ / označení)</span>
+          <input id="vehicle" placeholder="např. 1B2 3456 / Tesla 3" />
+        </label>
+      </div>
+
+      <div class="grid2">
+        <label class="field">
+          <span>Začátek směny</span>
+          <input id="shiftStart" type="time" />
+        </label>
+        <label class="field">
+          <span>Konec směny</span>
+          <input id="shiftEnd" type="time" />
+        </label>
+      </div>
+    </section>
 
     <section class="card">
       <div class="card-h">
         <h2>Před směnou</h2>
-        <div class="small">✅ rychlá kontrola před startem</div>
+        <div class="small">✅ udělej to rychle (30–60 s)</div>
       </div>
 
       <h3>Vozidlo</h3>
@@ -47,6 +75,15 @@
       </div>
       <div class="hint" id="startHint"></div>
     </section>
+
+    <section class="card">
+      <div class="card-h">
+        <h2>Během směny</h2>
+        <div class="small">👀 rychlá sebekontrola</div>
+      </div>
+      <div class="checks" id="during"></div>
+    </section>
+
     <section class="card">
       <div class="card-h">
         <h2>Po směně</h2>

@@ -28,7 +28,3 @@ Pokud chceš, napíšu ti i hotový Apps Script + šablonu Google Sheet (řádky
 
 ## Stav položek (OK / Není v pořádku)
 Každá položka má volbu **✓ OK** nebo **✕ Není v pořádku**. Ukládá se jako `ok` / `nok`.
-
-
-## Popis u položky při ✕
-Když zvolíš **✕ Není v pořádku**, objeví se u položky pole pro krátký popis. Ukládá se do `notes` a jde do Google Sheet i CSV.

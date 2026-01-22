@@ -1,5 +1,5 @@
 // Simple cache-first service worker for offline PWA
-const CACHE = "rb-checklist-pwa-v4";
+const CACHE = "rb-checklist-pwa-v1";
 const ASSETS = [
   "./",
   "./index.html",

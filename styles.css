@@ -180,21 +180,3 @@ textarea{min-height:88px; resize:vertical}
   gap:12px;
 }
 .check input[type="checkbox"]{ display:none; }
-
-.checkNote{
-  margin-top:10px;
-  width:100%;
-}
-.checkNote textarea{
-  min-height:64px;
-  padding:10px 12px;
-  border-radius: 12px;
-  background: rgba(255,255,255,.03);
-  border: 1px solid rgba(239,68,68,.35);
-}
-.checkNote .noteLabel{
-  font-size:12px;
-  color: #ffd5d5;
-  margin: 0 0 6px;
-  display:block;
-}
