@@ -27,12 +27,6 @@ const lists = {
     { id:"nav", t:"Navigace funkční", s:"GPS + data."},
     { id:"charger", t:"Nabíječka v autě", s:"Kabel + držák."},
   ],
-  during: [
-    { id:"rules", t:"Dodržuji pravidla firmy", s:"Žádné improvizace."},
-    { id:"payments", t:"Platby probíhají správně", s:"Karta/hotovost dle účtenky."},
-    { id:"behavior", t:"Chování k zákazníkům OK", s:"Slušnost, pomoc, klid."},
-    { id:"handsfree", t:"Telefon jen handsfree", s:"Bez výjimky."},
-  ],
   post: [
     { id:"end_apps", t:"Ukončena směna v aplikacích", s:"Odhlásit / offline."},
     { id:"revenue_check", t:"Tržby zkontrolovány", s:"Hotovost vs karta."},
@@ -44,16 +38,60 @@ function renderChecks(containerId, items){
   const el = $(containerId);
   el.innerHTML = "";
   for (const it of items){
-    const wrap = document.createElement("label");
-    wrap.className = "check";
-    wrap.innerHTML = `
-      <input type="checkbox" id="${containerId}_${it.id}">
-      <div>
-        <div class="lbl">${it.t}</div>
-        <div class="sub">${it.s || ""}</div>
+    const row = document.createElement("div");
+    row.className = "check";
+    row.dataset.key = `${containerId}:${it.id}`;
+    row.dataset.state = "";
+    row.innerHTML = `
+      <div style="display:flex;gap:12px;align-items:flex-start;width:100%">
+        <div style="flex:1">
+          <div class="lbl">${it.t}</div>
+          <div class="sub">${it.s || ""}</div>
+
+          <div class="checkNote" hidden>
+            <span class="noteLabel">Popis (proč ✕):</span>
+            <textarea placeholder="Stručně co je špatně + co je potřeba udělat…"></textarea>
+          </div>
+        </div>
+
+        <div class="stateBtns">
+          <button type="button" class="stateBtn ok" aria-label="OK">✓</button>
+          <button type="button" class="stateBtn nok" aria-label="Není v pořádku">✕</button>
+        </div>
       </div>
     `;
-    el.appendChild(wrap);
+
+    const okBtn = row.querySelector(".stateBtn.ok");
+    const nokBtn = row.querySelector(".stateBtn.nok");
+    const noteWrap = row.querySelector(".checkNote");
+    const noteTa = row.querySelector(".checkNote textarea");
+
+    const setState = (state) => {
+      row.dataset.state = state || "";
+      okBtn.classList.toggle("active", state === "ok");
+      nokBtn.classList.toggle("active", state === "nok");
+
+      const showNote = (state === "nok");
+      noteWrap.hidden = !showNote;
+      if (!showNote) {
+        // keep note text but it's not required; optionally clear:
+        // noteTa.value = "";
+      } else {
+        // focus optional on small screens
+        setTimeout(() => noteTa.focus({ preventScroll: true }), 0);
+      }
+    };
+
+    okBtn.addEventListener("click", () => setState(row.dataset.state === "ok" ? "" : "ok"));
+    nokBtn.addEventListener("click", () => setState(row.dataset.state === "nok" ? "" : "nok"));
+
+    // note saved separately
+    noteTa.addEventListener("input", () => {
+      row.dataset.note = noteTa.value;
+    });
+
+    setState("");
+    el.appendChild(row);
   }
 }
 
@@ -72,7 +110,17 @@ function toast(msg){
 }
 
 function getForm(){
-  const getC = (id) => ($(id)?.checked) || false;
+  const getState = (container, itemId) => {
+    const node = document.querySelector(`[data-key="${container}:${itemId}"]`);
+    const s = node?.dataset?.state || "";
+    return s || null; // 'ok' | 'nok' | null
+  };
+
+  const getNote = (container, itemId) => {
+    const node = document.querySelector(`[data-key="${container}:${itemId}"]`);
+    const note = node?.dataset?.note || "";
+    return (note || "").trim();
+  };
   const payload = {
     date: todayStr(),
     ts: new Date().toISOString(),
@@ -84,19 +132,26 @@ function getForm(){
     kmEnd: $("kmEnd").value.trim(),
     issues: $("issues").value.trim(),
     incident: $("incident").value.trim(),
-    checks: {}
+    checks: {},
+    notes: {}
   };
 
   for (const [k, arr] of Object.entries(lists)){
     payload.checks[k] = {};
+    payload.notes[k] = {};
     for (const it of arr){
-      payload.checks[k][it.id] = getC(`${k}_${it.id}`);
+      payload.checks[k][it.id] = getState(k, it.id);
+      const n = getNote(k, it.id);
+      if (n) payload.notes[k][it.id] = n;
     }
   }
   // post section stored under checks.post
   payload.checks.post = {};
+  payload.notes.post = {};
   for (const it of lists.post){
-    payload.checks.post[it.id] = getC(`post_${it.id}`);
+    payload.checks.post[it.id] = getState("post", it.id);
+    const n = getNote("post", it.id);
+    if (n) payload.notes.post[it.id] = n;
   }
   return payload;
 }
@@ -111,15 +166,34 @@ function setForm(data){
   $("kmEnd").value = data.kmEnd || "";
   $("issues").value = data.issues || "";
   $("incident").value = data.incident || "";
+  const setState = (container, itemId, v, noteText) => {
+    const node = document.querySelector(`[data-key="${container}:${itemId}"]`);
+    if (!node) return;
+    const okBtn = node.querySelector(".stateBtn.ok");
+    const nokBtn = node.querySelector(".stateBtn.nok");
+    const noteWrap = node.querySelector(".checkNote");
+    const noteTa = node.querySelector(".checkNote textarea");
 
-  const setC = (id, v) => { const el = $(id); if (el) el.checked = !!v; };
+    const state = (v === "ok" || v === "nok") ? v : (v === true ? "ok" : "");
+    node.dataset.state = state || "";
+    okBtn.classList.toggle("active", state === "ok");
+    nokBtn.classList.toggle("active", state === "nok");
+
+    const showNote = (state === "nok");
+    noteWrap.hidden = !showNote;
+
+    const noteVal = (noteText || "").trim();
+    node.dataset.note = noteVal;
+    if (noteTa) noteTa.value = noteVal;
+  };
+
   for (const [k, arr] of Object.entries(lists)){
     for (const it of arr){
-      setC(`${k}_${it.id}`, data?.checks?.[k]?.[it.id]);
+      setState(k, it.id, data?.checks?.[k]?.[it.id], data?.notes?.[k]?.[it.id]);
     }
   }
   for (const it of lists.post){
-    setC(`post_${it.id}`, data?.checks?.post?.[it.id]);
+    setState("post", it.id, data?.checks?.post?.[it.id], data?.notes?.post?.[it.id]);
   }
 }
 
@@ -201,8 +275,16 @@ function clearForm(){
   $("kmEnd").value = "";
   $("issues").value = "";
   $("incident").value = "";
-  // uncheck all
-  document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+  // reset all states
+  document.querySelectorAll('[data-key]').forEach(node => {
+    node.dataset.state = "";
+    node.dataset.note = "";
+    node.querySelectorAll('.stateBtn').forEach(b => b.classList.remove('active'));
+    const noteWrap = node.querySelector('.checkNote');
+    if (noteWrap) noteWrap.hidden = true;
+    const ta = node.querySelector('.checkNote textarea');
+    if (ta) ta.value = "";
+  });
 }
 
 function download(filename, text){
@@ -215,15 +297,26 @@ function download(filename, text){
 
 function toCSV(items){
   // Flatten a few useful fields + checks completion %
-  const header = ["date","ts","driver","vehicle","shiftStart","shiftEnd","kmStart","kmEnd","issues","incident","pre_done_pct","post_done_pct"];
+  const header = ["date","ts","driver","vehicle","shiftStart","shiftEnd","kmStart","kmEnd","issues","incident","pre_done_pct","post_done_pct","nok_count","nok_notes"];
   const rows = [header.join(",")];
 
   const pct = (obj) => {
     const vals = Object.values(obj||{});
     if (!vals.length) return "";
-    const done = vals.filter(Boolean).length;
+    const done = vals.filter(v => v === "ok" || v === true).length;
     return Math.round((done/vals.length)*100);
   }
+
+  for (const it of items){
+
+  const nokCount = (checks) => Object.values(checks||{}).filter(v => v === "nok").length;
+  const flattenNotes = (notesObj) => {
+    const out = [];
+    for (const [k, v] of Object.entries(notesObj||{})){
+      if (typeof v === 'string') out.push(`${k}:${v}`);
+    }
+    return out.join(' | ');
+  };
 
   for (const it of items){
     const pre = {
@@ -238,7 +331,7 @@ function toCSV(items){
       it.kmStart||"", it.kmEnd||"",
       (it.issues||"").replace(/\n/g," ").replace(/"/g,'""'),
       (it.incident||"").replace(/\n/g," ").replace(/"/g,'""'),
-      pct(pre), pct(post)
+      pct(pre), pct(post), (nokCount(pre)+nokCount(post)), (flattenNotes(Object.assign({}, it.notes?.pre_vehicle, it.notes?.pre_equipment, it.notes?.pre_tech, it.notes?.post)))
     ].map(v => `"${String(v ?? "").replace(/"/g,'""')}"`).join(",");
     rows.push(row);
   }
@@ -266,7 +359,6 @@ $("todayPill").textContent = todayStr();
 renderChecks("pre_vehicle", lists.pre_vehicle);
 renderChecks("pre_equipment", lists.pre_equipment);
 renderChecks("pre_tech", lists.pre_tech);
-renderChecks("during", lists.during);
 
 // Post checks rendered separately to keep section headings simple
 renderChecks("post", lists.post);
