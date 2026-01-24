@@ -517,24 +517,40 @@ function buildPrintableHTML(record){
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>RB Taxi – Checklist – ${escapeHtml(record.vehicle||"")}</title>
   <style>
-    body{font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif; padding:24px; color:#111;}
-    h1{margin:0 0 6px;}
-    .sub{color:#555; margin:0 0 18px;}
-    table{border-collapse:collapse; width:100%; margin:10px 0 18px;}
-    th,td{border:1px solid #ddd; padding:8px; vertical-align:top; font-size:12px;}
-    th{background:#f6f6f6; text-align:left; width:220px;}
-    .tbl th{width:auto;}
+    @page { size: A4; margin: 6mm; }
+    html,body{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body{
+      font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif;
+      color:#111;
+      margin:0;
+    }
+    /* One-page compaction */
+    .page{
+      width: 198mm; /* 210mm - margins approx */
+      transform: scale(0.82);
+      transform-origin: top left;
+    }
+    h1{margin:0 0 4px; font-size:16px;}
+    .sub{color:#555; margin:0 0 10px; font-size:10px;}
+    h3{margin:10px 0 6px; font-size:11px;}
+    table{border-collapse:collapse; width:100%; margin:6px 0 10px; page-break-inside:avoid;}
+    th,td{border:1px solid #ddd; padding:5px 6px; vertical-align:top; font-size:9px; line-height:1.15;}
+    th{background:#f6f6f6; text-align:left;}
+    .tbl thead th{font-size:9px;}
     .stOk{background:#e9f9ef;}
     .stNok{background:#fdecec;}
     .stEmpty{background:#f3f4f6; color:#555;}
-    @media print{ body{padding:0;} }
+    tr{page-break-inside:avoid;}
+    @media print{ body{margin:0;} }
   </style></head>
   <body>
+    <div class="page">
     <h1>RB Taxi – Denní checklist</h1>
     <p class="sub">${escapeHtml(record.date||"")} • ${escapeHtml(new Date(record.ts).toLocaleString("cs-CZ"))}</p>
     <h3>Identifikace</h3>
     <table><tbody>${metaRows}</tbody></table>
     ${checksHtml}
+      </div>
   </body></html>`;
 }
 
