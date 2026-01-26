@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=18" />
 </head>
 <body>
   <header class="topbar">
@@ -18,15 +18,28 @@
       <div class="logo">RB</div>
       <div>
         <div class="title">RB Taxi</div>
-        <div class="subtitle">Denní mobilní checklist</div>
+        <div class="subtitle">Denní mobilní checklist <span id="verBadge" class="verBadge">v18</span></div>
       </div>
     </div>
     <button id="installBtn" class="btn ghost" hidden>Přidat na plochu</button>
   </header>
 
   <main class="wrap">
+
+    <nav class="segNav" aria-label="Rychlá navigace">
+      <button class="seg" data-jump="#sec-id">Identifikace</button>
+      <button class="seg" data-jump="#sec-pre">Před směnou</button>
+      <button class="seg" data-jump="#sec-post">Po směně</button>
+      <button class="seg" data-jump="#sec-history">Historie</button>
+      <div class="segMeta">
+        <span class="pill mini" id="pillPre">Před: —</span>
+        <span class="pill mini" id="pillPost">Po: —</span>
+        <span class="pill mini warn" id="pillNok">✕: —</span>
+      </div>
+    </nav>
+
     <!-- IDENTIFIKACE -->
-    <section class="card">
+    <section id="sec-id" class="card">
       <div class="card-h">
         <h2>Identifikace</h2>
         <div class="pill" id="todayPill"></div>
@@ -81,19 +94,19 @@
 </section>
 
     <!-- PŘED SMĚNOU -->
-    <section class="card">
+    <section id="sec-pre" class="card">
       <div class="card-h">
         <h2>Před směnou</h2>
         <div class="small">✅ udělej to rychle (30–60 s)</div>
       </div>
 
-      <h3>Vozidlo</h3>
+      <h3><span class="h3icon">🚗</span>Vozidlo</h3>
       <div class="checks" id="pre_vehicle"></div>
 
-      <h3>Povinná výbava</h3>
+      <h3><span class="h3icon">🧰</span>Povinná výbava</h3>
       <div class="checks" id="pre_equipment"></div>
 
-      <h3>Taxi technika</h3>
+      <h3><span class="h3icon">📱</span>Taxi technika</h3>
       <div class="checks" id="pre_tech"></div>
 
       <div class="actions">
@@ -104,14 +117,19 @@
     </section>
 
     <!-- PO SMĚNĚ -->
-    <section class="card">
+    <section id="sec-post" class="card">
       <div class="card-h">
         <h2>Po směně</h2>
         <div class="small">🧾 finance + zápis</div>
       </div>
 
-      <h3>Ukončení směny</h3>
+      <h3><span class="h3icon">✅</span>Ukončení směny</h3>
       <div class="checks" id="post"></div>
+
+      <div class="summaryBox" id="nokSummary" hidden>
+        <div class="summaryTitle">⚠️ Souhrn NEOK (co je potřeba řešit)</div>
+        <div class="summaryList" id="nokSummaryList"></div>
+      </div>
 
       <div class="grid2">
         <label class="field">
@@ -124,12 +142,12 @@
         </label>
       </div>
 
-      <h3>Závady dnes</h3>
+      <h3><span class="h3icon">🛠️</span>Závady dnes</h3>
       <label class="field">
         <textarea id="issues" placeholder="Co je špatně? (např. pískání brzd, žárovka, hláška na palubce…)"></textarea>
       </label>
 
-      <h3>Incident</h3>
+      <h3><span class="h3icon">🧾</span>Incident</h3>
       <label class="field">
         <textarea id="incident" placeholder="Nehoda / konflikt / kontrola / ztracené věci… stručně a jasně"></textarea>
       </label>
@@ -158,7 +176,7 @@
     </section>
 
     <!-- HISTORIE -->
-    <section class="card subtle">
+    <section id="sec-history" class="card subtle">
       <div class="card-h">
         <h2>Historie v telefonu</h2>
         <div class="small">📦 offline archiv</div>
@@ -171,7 +189,14 @@
     </section>
   </main>
 
-  <script src="app.js"></script>
+  <div class="actionBar" role="region" aria-label="Rychlé akce">
+    <button class="btn ghost" id="barSave">Uložit</button>
+    <button class="btn" id="barSubmit">Odeslat</button>
+    <button class="btn ghost" id="barExport">PDF</button>
+  </div>
+
+
+  <script src="app.js?v=18"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));

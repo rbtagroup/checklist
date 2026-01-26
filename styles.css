@@ -204,3 +204,97 @@ textarea{min-height:88px; resize:vertical}
 
 details.mini{ margin-top:10px; }
 details.mini summary{ cursor:pointer; }
+
+.segNav{
+  position: sticky;
+  top: 10px;
+  z-index: 10;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px 12px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(10,16,28,.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  margin: 10px 0 16px;
+}
+.segNav .seg{
+  padding:8px 10px;
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  color: inherit;
+  font-weight: 700;
+  font-size: 13px;
+}
+.segNav .seg.active{
+  background: rgba(34,197,94,.14);
+  border-color: rgba(34,197,94,.28);
+}
+.segMeta{ display:flex; gap:8px; align-items:center; }
+.pill.mini{ padding:6px 10px; font-size:12px; border-radius: 999px; }
+.pill.mini.warn{ background: rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.25); }
+
+.actionBar{
+  position: fixed;
+  left: 0; right: 0;
+  bottom: calc(env(safe-area-inset-bottom) + 10px);
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  padding: 0 14px;
+  z-index: 20;
+  pointer-events:none;
+}
+.actionBar .btn{
+  pointer-events:auto;
+  min-width: 110px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+@media (min-width: 900px){
+  .actionBar{ display:none; }
+}
+body{ padding-bottom: 90px; }
+
+.summaryBox{
+  margin-top: 12px; padding: 12px 12px; border-radius: 18px;
+  border: 1px solid rgba(239,68,68,.30);
+  background: rgba(239,68,68,.08);
+}
+.summaryTitle{ font-weight: 900; margin-bottom: 8px; }
+.summaryList{ font-size: 13px; line-height: 1.35; }
+.summaryItem{ display:flex; gap:8px; margin:6px 0; }
+.summaryItem .tag{
+  padding:2px 8px; border-radius:999px; font-size:11px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+}
+.h3icon{ margin-right:8px; opacity:.9; }
+
+/* v18 premium */
+:root{ --radius-lg: 22px; }
+.card{ border-radius: var(--radius-lg); padding: 14px 14px; }
+.card-h h2{ font-size: 18px; letter-spacing: .2px; }
+h3{ font-size: 14px; margin: 14px 0 8px; }
+.small{ font-size: 12px; }
+.field span{ font-size: 12px; opacity:.9; }
+input, textarea, select{ font-size: 16px; }
+.wrap{ max-width: 980px; }
+.check{ padding: 12px 12px; border-radius: 18px; }
+.lbl{ font-size: 14px; }
+.sub{ font-size: 12px; opacity:.78; }
+.actions{ gap:10px; }
+.btn{ border-radius: 16px; }
+.verBadge{
+  display:inline-block; margin-left:8px; padding:2px 8px; border-radius:999px;
+  font-size:11px; border:1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04); opacity:.9;
+}
+@media (max-width: 420px){
+  .card-h h2{ font-size: 17px; }
+  .segNav .seg{ font-size: 12px; padding:7px 9px; }
+  .actionBar .btn{ min-width: 96px; }
+}

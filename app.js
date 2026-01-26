@@ -573,3 +573,132 @@ $("btnClear")?.addEventListener("click", () => {
   renderHistory();
   toast("Historie smazána.");
 });
+
+/* RB_UI_V18_GUARD */
+(function(){
+  function jumpTo(selector){
+    const el = document.querySelector(selector);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  function setActiveSeg(selector){
+    document.querySelectorAll(".segNav .seg").forEach(b => {
+      b.classList.toggle("active", b.dataset.jump === selector);
+    });
+  }
+
+  function computeStats(){
+    const all = {};
+    for (const [k, arr] of Object.entries(lists)){
+      for (const it of arr){
+        all[`${k}:${it.id}`] = getState(k, it.id);
+      }
+    }
+    const preKeys = ["pre_vehicle","pre_equipment","pre_tech"];
+    const preVals = preKeys.flatMap(k => lists[k].map(it => getState(k, it.id)));
+    const postVals = lists.post.map(it => getState("post", it.id));
+
+    const pct = (vals)=> {
+      const filled = vals.filter(v => v==="ok" || v==="nok");
+      if (!filled.length) return 0;
+      const ok = filled.filter(v => v==="ok").length;
+      return Math.round((ok/filled.length)*100);
+    };
+
+    const nokCount = Object.values(all).filter(v => v==="nok").length;
+    return { prePct: pct(preVals), postPct: pct(postVals), nokCount };
+  }
+
+  function refreshPills(){
+    const s = computeStats();
+    const p1 = $("pillPre"); if (p1) p1.textContent = `Před: ${s.prePct}%`;
+    const p2 = $("pillPost"); if (p2) p2.textContent = `Po: ${s.postPct}%`;
+    const p3 = $("pillNok"); if (p3) p3.textContent = `✕: ${s.nokCount}`;
+  }
+
+  function refreshNokSummary(){
+    const box = $("nokSummary");
+    const listEl = $("nokSummaryList");
+    if (!box || !listEl) return;
+
+    const nok = [];
+    for (const [k, arr] of Object.entries(lists)){
+      for (const it of arr){
+        const st = getState(k, it.id);
+        if (st === "nok"){
+          const note = getNote(k, it.id);
+          const group = (k === "post") ? "Po směně" : "Před směnou";
+          nok.push({ group, label: it.t, note });
+        }
+      }
+    }
+
+    if (!nok.length){
+      box.hidden = true;
+      listEl.innerHTML = "";
+      return;
+    }
+
+    box.hidden = false;
+    listEl.innerHTML = nok.map(x => `
+      <div class="summaryItem">
+        <span class="tag">${escapeHtml(x.group)}</span>
+        <div><strong>${escapeHtml(x.label)}</strong>${x.note ? ` — ${escapeHtml(x.note)}` : ""}</div>
+      </div>
+    `).join("");
+  }
+
+  document.querySelectorAll(".segNav .seg").forEach(b => {
+    b.addEventListener("click", () => {
+      const sel = b.dataset.jump;
+      setActiveSeg(sel);
+      jumpTo(sel);
+    });
+  });
+
+  $("barSave")?.addEventListener("click", () => {
+    saveDraft(getForm());
+    toast("Uloženo.");
+  });
+  $("barSubmit")?.addEventListener("click", () => $("btnSubmit")?.click());
+  $("barExport")?.addEventListener("click", () => $("btnExport")?.click());
+
+  document.addEventListener("click", (e) => {
+    if (e.target?.classList?.contains("stateBtn")) { refreshPills(); refreshNokSummary(); }
+  });
+  document.addEventListener("input", (e) => {
+    if (e.target?.closest?.(".checkNote") || e.target?.id === "issues" || e.target?.id === "incident") {
+      refreshPills(); refreshNokSummary();
+    }
+  });
+
+  $("btnSubmit")?.addEventListener("click", () => {
+    const se = $("shiftEnd");
+    if (se && !se.value){
+      const now = new Date();
+      const pad=(n)=>String(n).padStart(2,"0");
+      se.value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    }
+  }, true);
+
+  const LAST_KEY = "rb_checklist_v18_last_values";
+  function loadLast(){ try { return JSON.parse(localStorage.getItem(LAST_KEY)||"{}"); } catch { return {}; } }
+  function saveLast(v){ localStorage.setItem(LAST_KEY, JSON.stringify(v||{})); }
+
+  const draft = loadDraft?.() || null;
+  if (!draft){
+    const last = loadLast();
+    if ($("driver") && !$("driver").value) $("driver").value = last.driver || "";
+    if ($("vehicle") && !$("vehicle").value) $("vehicle").value = last.vehicle || "";
+    if ($("takenFrom") && !$("takenFrom").value) $("takenFrom").value = last.takenFrom || "";
+  }
+
+  const _pushHistory = pushHistory;
+  window.pushHistory = function(payload){
+    try { saveLast({ driver: payload.driver, vehicle: payload.vehicle, takenFrom: payload.takenFrom }); } catch {}
+    return _pushHistory(payload);
+  }
+
+  refreshPills();
+  refreshNokSummary();
+})();
