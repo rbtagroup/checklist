@@ -702,3 +702,94 @@ $("btnClear")?.addEventListener("click", () => {
   refreshPills();
   refreshNokSummary();
 })();
+
+/* RB_GATE_V20 */
+(function(){
+  // Gate submit until required fields + NOK notes are satisfied.
+  function getRequiredState(){
+    const driver = ($("driver")?.value || "").trim();
+    const vehicle = ($("vehicle")?.value || "").trim();
+    const takenFrom = ($("takenFrom")?.value || "").trim();
+
+    const missing = [];
+    if (!vehicle) missing.push("Vyber SPZ");
+    if (!driver) missing.push("Vyplň řidiče");
+    if (!takenFrom) missing.push("Vyplň „Převzato po“");
+
+    // NOK notes: any item marked NOK must have non-empty note
+    const nokMissing = [];
+    for (const [k, arr] of Object.entries(lists)){
+      for (const it of arr){
+        const st = getState(k, it.id);
+        if (st === "nok"){
+          const note = (getNote(k, it.id) || "").trim();
+          if (!note){
+            // label + section
+            const group = (k === "post") ? "Po směně" : "Před směnou";
+            nokMissing.push(`${group}: ${it.t}`);
+          }
+        }
+      }
+    }
+    return { missing, nokMissing };
+  }
+
+  function renderSubmitHint(state){
+    const box = $("submitHint");
+    if (!box) return;
+    const msgs = [];
+    if (state.missing.length) msgs.push("• " + state.missing.join(" • "));
+    if (state.nokMissing.length){
+      const list = state.nokMissing.slice(0, 4).map(x => `• Doplnit popis u ✕: ${x}`).join("<br>");
+      msgs.push(list + (state.nokMissing.length > 4 ? `<br>• … a další (${state.nokMissing.length-4})` : ""));
+    }
+    if (!msgs.length){
+      box.hidden = true;
+      box.innerHTML = "";
+      return;
+    }
+    box.hidden = false;
+    box.innerHTML = `<strong>Nelze odeslat:</strong><br>${msgs.join("<br>")}`;
+  }
+
+  function setSubmitEnabled(enabled){
+    const b1 = $("btnSubmit");
+    const b2 = $("barSubmit");
+    if (b1) b1.disabled = !enabled;
+    if (b2) b2.disabled = !enabled;
+  }
+
+  function refreshGate(){
+    const st = getRequiredState();
+    const ok = (!st.missing.length && !st.nokMissing.length);
+    setSubmitEnabled(ok);
+    renderSubmitHint(st);
+  }
+
+  // Make sure refreshGate runs on relevant changes
+  document.addEventListener("input", (e) => {
+    const id = e.target?.id;
+    if (["driver","vehicle","takenFrom"].includes(id)) refreshGate();
+    if (e.target?.closest?.(".checkNote") || id==="issues" || id==="incident") refreshGate();
+  });
+  document.addEventListener("click", (e) => {
+    if (e.target?.classList?.contains("stateBtn")) refreshGate();
+  });
+
+  // If user clicks disabled submit via other means, show toast
+  function guardedSubmitClick(e){
+    const st = getRequiredState();
+    if (st.missing.length || st.nokMissing.length){
+      e.preventDefault();
+      e.stopPropagation();
+      toast("Doplň povinné údaje / popis u ✕.");
+      refreshGate();
+      return false;
+    }
+  }
+  $("btnSubmit")?.addEventListener("click", guardedSubmitClick, true);
+  $("barSubmit")?.addEventListener("click", guardedSubmitClick, true);
+
+  // Initial
+  refreshGate();
+})();

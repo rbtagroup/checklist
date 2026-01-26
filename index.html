@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="styles.css?v=18" />
+  <link rel="stylesheet" href="styles.css?v=20" />
 </head>
 <body>
   <header class="topbar">
@@ -18,7 +18,7 @@
       <div class="logo">RB</div>
       <div>
         <div class="title">RB Taxi</div>
-        <div class="subtitle">Denní mobilní checklist <span id="verBadge" class="verBadge">v18</span></div>
+        <div class="subtitle">Denní mobilní checklist <span id="verBadge" class="verBadge">v20</span></div>
       </div>
     </div>
     <button id="installBtn" class="btn ghost" hidden>Přidat na plochu</button>
@@ -109,6 +109,7 @@
       <h3><span class="h3icon">📱</span>Taxi technika</h3>
       <div class="checks" id="pre_tech"></div>
 
+      <div class="submitHint" id="submitHint" hidden></div>
       <div class="actions">
         <button class="btn" id="btnStart">ZAČÍT SMĚNU</button>
         <button class="btn ghost" id="btnSave1">Uložit rozpracované</button>
@@ -196,7 +197,7 @@
   </div>
 
 
-  <script src="app.js?v=18"></script>
+  <script src="app.js?v=20"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));

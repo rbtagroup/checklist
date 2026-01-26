@@ -1,13 +1,20 @@
 // Simple cache-first service worker for offline PWA
-const CACHE = "rb-checklist-pwa-v18";
+const CACHE = "rb-checklist-pwa-v20";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=18",
-  "./app.js?v=18",
+  "./styles.css?v=20",
+  "./app.js?v=20",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png"
+  "./icon-192.png",
+  "./icon-512.png",
+  "./icon-192-maskable.png",
+  "./icon-512-maskable.png",
+  "./apple-touch-icon.png",
+  "./apple-touch-icon-152.png",
+  "./apple-touch-icon-167.png",
 ];
 
 self.addEventListener("install", (event) => {

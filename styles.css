@@ -298,3 +298,19 @@ input, textarea, select{ font-size: 16px; }
   .segNav .seg{ font-size: 12px; padding:7px 9px; }
   .actionBar .btn{ min-width: 96px; }
 }
+
+.submitHint{
+  margin: 10px 0 8px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(239,68,68,.28);
+  background: rgba(239,68,68,.08);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.btn[disabled]{
+  opacity: .45;
+  filter: grayscale(.15);
+  cursor: not-allowed;
+}
+.btn[disabled]:hover{ transform:none; }
