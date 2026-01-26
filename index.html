@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="styles.css?v=21" />
+  <link rel="stylesheet" href="styles.css?v=23" />
 </head>
 <body>
   <header class="topbar">
@@ -18,7 +18,7 @@
       <div class="logo">RB</div>
       <div>
         <div class="title">RB Taxi</div>
-        <div class="subtitle">Denní mobilní checklist <span id="verBadge" class="verBadge">v21</span></div>
+        <div class="subtitle">Denní mobilní checklist <span id="verBadge" class="verBadge">v23</span></div>
       </div>
     </div>
     <button id="installBtn" class="btn ghost" hidden>Přidat na plochu</button>
@@ -30,6 +30,7 @@
       <button class="seg" data-jump="#sec-id">Identifikace</button>
       <button class="seg" data-jump="#sec-pre">Před směnou</button>
       <button class="seg" data-jump="#sec-post">Po směně</button>
+      <button class="seg" data-jump="#sec-settings">Nastavení</button>
       <button class="seg" data-jump="#sec-history">Historie</button>
       <div class="segMeta">
         <span class="pill mini" id="pillPre">Před: —</span>
@@ -189,7 +190,32 @@
     </section>
 
     <!-- HISTORIE -->
-    <section id="sec-history" class="card subtle">
+    
+  <section class="card" id="sec-settings">
+    <div class="card-h">
+      <h2>Nastavení</h2>
+      <div class="small">Hybrid sync (Google Sheets API)</div>
+    </div>
+
+    <div class="grid">
+      <label class="field">
+        <span>Endpoint URL (Apps Script Web App)</span>
+        <input id="endpoint" placeholder="https://script.google.com/macros/s/XXXX/exec" inputmode="url">
+      </label>
+      <div class="field">
+        <span>Stav</span>
+        <div class="pill" id="apiStatus">—</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn ghost" id="btnPing">Test API</button>
+      <button class="btn ghost" id="btnSyncNow">Sync nyní</button>
+      <div class="pill" id="queuePill">Fronta: 0</div>
+    </div>
+  </section>
+
+<section id="sec-history" class="card subtle">
       <div class="card-h">
         <h2>Historie v telefonu</h2>
         <div class="small">📦 offline archiv</div>
@@ -209,7 +235,7 @@
   </div>
 
 
-  <script src="app.js?v=21"></script>
+  <script src="app.js?v=23"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));

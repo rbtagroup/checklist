@@ -971,3 +971,366 @@ $("btnClear")?.addEventListener("click", () => {
   refreshCarryover();
   window.__rb_refreshGate();
 })();
+
+/* RB_V23_HYBRID */
+(function(){
+  const ENDPOINT_KEY = "rb_api_endpoint_v23";
+  const DB_NAME = "rb_checklist_db_v23";
+  const DB_VER = 1;
+  const STORE = "queue";
+  const STORE_PHOTOS = "photos";
+  const REQUIRED_PHOTO_IDS = new Set(["clean_out","clean_in","lights"]);
+  const CRITICAL_IDS = new Set(["brakes","lights","triangle","firstaid"]);
+
+  function getEndpoint(){ return (localStorage.getItem(ENDPOINT_KEY) || "").trim(); }
+  function setEndpoint(v){ localStorage.setItem(ENDPOINT_KEY, (v||"").trim()); }
+  function setStatus(text, cls){
+    const el = $("apiStatus");
+    if (!el) return;
+    el.textContent = text;
+    el.classList.remove("ok","err","warn");
+    if (cls) el.classList.add(cls);
+  }
+
+  function openDB(){
+    return new Promise((resolve,reject)=>{
+      const req = indexedDB.open(DB_NAME, DB_VER);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE)) {
+          const s = db.createObjectStore(STORE, { keyPath:"qid" });
+          s.createIndex("status","status",{ unique:false });
+          s.createIndex("ts","ts",{ unique:false });
+        }
+        if (!db.objectStoreNames.contains(STORE_PHOTOS)) {
+          db.createObjectStore(STORE_PHOTOS, { keyPath:"pid" });
+        }
+      };
+      req.onsuccess = ()=> resolve(req.result);
+      req.onerror = ()=> reject(req.error);
+    });
+  }
+  async function idbPut(store, val){
+    const db = await openDB();
+    return new Promise((resolve,reject)=>{
+      const tx = db.transaction(store,"readwrite");
+      tx.objectStore(store).put(val);
+      tx.oncomplete = ()=> resolve(true);
+      tx.onerror = ()=> reject(tx.error);
+    });
+  }
+  async function idbGet(store, key){
+    const db = await openDB();
+    return new Promise((resolve,reject)=>{
+      const tx = db.transaction(store,"readonly");
+      const r = tx.objectStore(store).get(key);
+      r.onsuccess = ()=> resolve(r.result||null);
+      r.onerror = ()=> reject(r.error);
+    });
+  }
+  async function idbAll(store){
+    const db = await openDB();
+    return new Promise((resolve,reject)=>{
+      const tx = db.transaction(store,"readonly");
+      const r = tx.objectStore(store).getAll();
+      r.onsuccess = ()=> resolve(r.result||[]);
+      r.onerror = ()=> reject(r.error);
+    });
+  }
+  async function idbUpdate(store, key, patch){
+    const cur = await idbGet(store,key);
+    if (!cur) return;
+    await idbPut(store, Object.assign(cur, patch));
+  }
+  async function queueCount(){
+    const all = await idbAll(STORE);
+    return all.filter(x=>x.status==="pending"||x.status==="error").length;
+  }
+  async function refreshQueuePill(){
+    const el = $("queuePill");
+    if (!el) return;
+    const n = await queueCount();
+    el.textContent = `Fronta: ${n}`;
+  }
+
+  async function apiPing(){
+    const ep = getEndpoint();
+    if (!ep) { setStatus("Chybí endpoint","warn"); return false; }
+    try {
+      const res = await fetch(ep + "?action=ping");
+      const j = await res.json();
+      if (j && j.ok) { setStatus("Online","ok"); return true; }
+      setStatus("Chyba API","err"); return false;
+    } catch(e) {
+      setStatus("Offline / nedostupné","warn"); return false;
+    }
+  }
+  async function apiLast(spz){
+    const ep = getEndpoint();
+    if (!ep || !spz) return null;
+    try {
+      const res = await fetch(ep + "?action=last&spz=" + encodeURIComponent(spz));
+      const j = await res.json();
+      if (j && j.ok) return j.payload || null;
+      return null;
+    } catch(e) { return null; }
+  }
+  async function apiSubmit(payload){
+    const ep = getEndpoint();
+    if (!ep) throw new Error("Missing endpoint");
+    const res = await fetch(ep, {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ action:"submit", payload })
+    });
+    const j = await res.json();
+    if (!j || !j.ok) throw new Error(j?.error || "API error");
+    return j.id;
+  }
+
+  function fileToBase64(file){
+    return new Promise((resolve,reject)=>{
+      const reader = new FileReader();
+      reader.onload = ()=> {
+        const dataUrl = reader.result;
+        const b64 = String(dataUrl).split(",")[1] || "";
+        resolve(b64);
+      };
+      reader.onerror = ()=> reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function ensurePhotoUI(){
+    document.querySelectorAll(".check").forEach(ch => {
+      const id = ch.getAttribute("data-id");
+      if (!id || !REQUIRED_PHOTO_IDS.has(id)) return;
+      if (ch.querySelector(".photoWrap")) return;
+      const wrap = document.createElement("div");
+      wrap.className = "photoWrap";
+      wrap.innerHTML = `
+        <div class="small" style="margin-top:6px;opacity:.85">Foto (povinné při ✕)</div>
+        <input class="photoInput" type="file" accept="image/*" capture="environment" data-photo-id="${id}">
+        <div class="small" id="photoState_${id}" style="opacity:.85;margin-top:4px">—</div>
+      `;
+      ch.appendChild(wrap);
+    });
+  }
+
+  document.addEventListener("change", async (e)=>{
+    const inp = e.target?.closest?.(".photoInput");
+    if (!inp) return;
+    const id = inp.getAttribute("data-photo-id");
+    const file = inp.files && inp.files[0];
+    if (!file) return;
+    const b64 = await fileToBase64(file);
+    const pid = "p_" + Date.now() + "_" + Math.random().toString(16).slice(2);
+    await idbPut(STORE_PHOTOS, {
+      pid,
+      itemId: id,
+      name: `${id}_${Date.now()}.jpg`,
+      type: file.type || "image/jpeg",
+      data: b64
+    });
+    const mapKey = "rb_photo_map_v23";
+    let m={};
+    try{ m=JSON.parse(localStorage.getItem(mapKey)||"{}"); }catch{}
+    m[id]=pid;
+    localStorage.setItem(mapKey, JSON.stringify(m));
+    const st = $("photoState_"+id);
+    if (st) st.textContent = "Foto přidáno ✅";
+    if (typeof window.__rb_refreshGate === "function") window.__rb_refreshGate();
+  });
+
+  async function buildPhotosPayload(){
+    const mapKey = "rb_photo_map_v23";
+    let m={};
+    try{ m=JSON.parse(localStorage.getItem(mapKey)||"{}"); }catch{}
+    const photos=[];
+    for (const [id,pid] of Object.entries(m)) {
+      const rec = await idbGet(STORE_PHOTOS, pid);
+      if (rec) photos.push({ name: rec.name, type: rec.type, data: rec.data, itemId: id });
+    }
+    return photos;
+  }
+
+  async function missingRequiredPhotos(){
+    const mapKey = "rb_photo_map_v23";
+    let m={};
+    try{ m=JSON.parse(localStorage.getItem(mapKey)||"{}"); }catch{}
+    const miss=[];
+    for (const id of REQUIRED_PHOTO_IDS) {
+      let st=null;
+      for (const [k,arr] of Object.entries(lists)) {
+        if ((arr||[]).some(x=>x.id===id)) {
+          st = getState(k,id);
+          if (st==="nok" && !m[id]) miss.push(id);
+        }
+      }
+    }
+    return miss;
+  }
+
+  async function applyCarryoverFromLast(){
+    const spz = ($("vehicle")?.value||"").trim();
+    const taken = ($("takenFrom")?.value||"").trim();
+    if (!spz || !taken) return;
+    const last = await apiLast(spz);
+    if (!last) return;
+    const nok=[];
+    if (last.checks) {
+      for (const [k,obj] of Object.entries(last.checks)) {
+        for (const [id,v] of Object.entries(obj||{})) {
+          if (v==="nok") nok.push({k,id});
+        }
+      }
+    }
+    const tag = `[EXISTOVALO PŘI PŘEVZETÍ – po: ${last.driver||"?"} – ${new Date(last.time).toLocaleString("cs-CZ")}]`;
+    for (const it of nok) {
+      if (lists[it.k] && lists[it.k].some(x=>x.id===it.id)) {
+        setState(it.k,it.id,"nok");
+        const cur=(getNote(it.k,it.id)||"").trim();
+        if (!cur) setNote(it.k,it.id, tag + " doplň detail");
+        else if (!cur.includes("[EXISTOVALO PŘI PŘEVZETÍ")) setNote(it.k,it.id, tag + " " + cur);
+      }
+    }
+    if (typeof renderLists==="function") renderLists();
+    if (typeof window.__rb_refreshGate==="function") window.__rb_refreshGate();
+  }
+
+  ["vehicle","takenFrom"].forEach(id=>{ $(id)?.addEventListener("change", ()=>{ apiPing(); applyCarryoverFromLast(); }); });
+
+  function inCriticalStop(){
+    for (const [k,arr] of Object.entries(lists)) {
+      for (const it of arr) {
+        if (CRITICAL_IDS.has(it.id) && getState(k,it.id)==="nok") return true;
+      }
+    }
+    return false;
+  }
+  function setUiLocked(locked){
+    document.querySelectorAll("input,textarea,select,button").forEach(el=>{
+      if (el.id==="criticalAck") return;
+      if (el.classList.contains("photoInput")) return;
+      if (locked) {
+        if (el.classList.contains("checkNote")) return;
+        el.setAttribute("data-lockbak","1");
+        el.disabled = true;
+      } else {
+        if (el.getAttribute("data-lockbak")==="1") el.disabled = false;
+        el.removeAttribute("data-lockbak");
+      }
+    });
+  }
+  function refreshStopLock(){
+    const stop = inCriticalStop();
+    const box = $("criticalBox");
+    if (!stop) {
+      setUiLocked(false);
+      if (box) box.hidden = true;
+      return true;
+    }
+    if (box) box.hidden = false;
+    const ack = $("criticalAck");
+    const ok = !!ack?.checked;
+    if (!ok) setUiLocked(true);
+    else setUiLocked(false);
+    return ok;
+  }
+  $("criticalAck")?.addEventListener("change", ()=>{ refreshStopLock(); if (typeof window.__rb_refreshGate==="function") window.__rb_refreshGate(); });
+
+  async function createPayload(){
+    const form = getForm();
+    const issues=[];
+    for (const [k,arr] of Object.entries(lists)) {
+      for (const it of arr) {
+        if (getState(k,it.id)==="nok") {
+          const note=(getNote(k,it.id)||"").trim();
+          issues.push({
+            section:(k==="post")?"Po směně":"Před směnou",
+            item:it.t,
+            note,
+            carryover: note.includes("[EXISTOVALO PŘI PŘEVZETÍ")
+          });
+        }
+      }
+    }
+    const photos = await buildPhotosPayload();
+    return {
+      vehicle: form.vehicle,
+      driver: form.driver,
+      takenFrom: form.takenFrom,
+      checks: form.checks,
+      notes: form.notes,
+      issues,
+      photos,
+      meta: {
+        appVersion: "v23",
+        createdAt: new Date().toISOString(),
+        userAgent: navigator.userAgent
+      }
+    };
+  }
+
+  async function enqueue(payload){
+    const qid = "q_" + Date.now() + "_" + Math.random().toString(16).slice(2);
+    await idbPut(STORE, { qid, ts:Date.now(), status:"pending", payload });
+    await refreshQueuePill();
+    return qid;
+  }
+
+  async function syncOnce(){
+    const all = await idbAll(STORE);
+    const items = all.filter(x=>x.status==="pending"||x.status==="error").sort((a,b)=>a.ts-b.ts);
+    if (!items.length) return true;
+    const online = await apiPing();
+    if (!online) return false;
+    for (const it of items) {
+      try {
+        const id = await apiSubmit(it.payload);
+        await idbUpdate(STORE, it.qid, { status:"sent", sentId:id, sentAt:Date.now(), error:null });
+      } catch(e) {
+        await idbUpdate(STORE, it.qid, { status:"error", error:String(e) });
+        break;
+      }
+    }
+    await refreshQueuePill();
+    return true;
+  }
+
+  $("btnSyncNow")?.addEventListener("click", async ()=>{ await syncOnce(); toast("Sync dokončen."); });
+  $("btnPing")?.addEventListener("click", async ()=>{ const ok = await apiPing(); toast(ok?"API OK":"API nedostupné"); });
+  $("endpoint")?.addEventListener("input", (e)=>{ setEndpoint(e.target.value); });
+  if ($("endpoint")) $("endpoint").value = getEndpoint();
+
+  const prevGate = window.__rb_refreshGate;
+  window.__rb_refreshGate = async function(){
+    try{ if (typeof prevGate==="function") prevGate(); }catch{}
+    const stopOk = refreshStopLock();
+    const miss = await missingRequiredPhotos();
+    const enabled = stopOk && miss.length===0;
+    if (!enabled) {
+      $("btnSubmit") && ($("btnSubmit").disabled = true);
+      $("barSubmit") && ($("barSubmit").disabled = true);
+    }
+    const hint = $("submitHint");
+    if (hint && miss.length) {
+      hint.hidden = false;
+      hint.innerHTML = `<strong>Nelze odeslat:</strong><br>• Chybí povinné foto u ✕: ${miss.join(", ")}`;
+    }
+  }
+
+  $("btnSubmit")?.addEventListener("click", async ()=>{
+    await window.__rb_refreshGate();
+    if ($("btnSubmit")?.disabled) return;
+    const payload = await createPayload();
+    await enqueue(payload);
+    toast("Uloženo do fronty.");
+    await syncOnce();
+  }, false);
+
+  ensurePhotoUI();
+  refreshQueuePill();
+  apiPing();
+  window.addEventListener("online", ()=> syncOnce());
+})();
