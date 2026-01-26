@@ -793,3 +793,181 @@ $("btnClear")?.addEventListener("click", () => {
   // Initial
   refreshGate();
 })();
+
+/* RB_V21_CORE */
+(function(){
+  // ----- config -----
+  // Mark critical items by id (from v11 lists)
+  const CRITICAL = new Set(["brakes","lights","triangle","firstaid"]);
+
+  function isCriticalNok(){
+    const crit = [];
+    for (const [k, arr] of Object.entries(lists)){
+      for (const it of arr){
+        const st = getState(k, it.id);
+        if (st === "nok" && CRITICAL.has(it.id)){
+          const group = (k === "post") ? "Po směně" : "Před směnou";
+          crit.push(`${group}: ${it.t}`);
+        }
+      }
+    }
+    return crit;
+  }
+
+  function refreshCriticalBox(){
+    const crit = isCriticalNok();
+    const box = $("criticalBox");
+    const text = $("criticalText");
+    const ack = $("criticalAck");
+    if (!box || !text || !ack) return { crit, ok:true };
+    if (!crit.length){
+      box.hidden = true;
+      ack.checked = false;
+      text.innerHTML = "";
+      return { crit, ok:true };
+    }
+    box.hidden = false;
+    text.innerHTML = `Byla označena kritická závada:<br><strong>${crit.map(escapeHtml).join("<br>")}</strong><br><br><strong>VOZIDLO NESMÍ DO PROVOZU.</strong>`;
+    // ok only if acknowledged
+    const ok = !!ack.checked;
+    return { crit, ok };
+  }
+
+  $("criticalAck")?.addEventListener("change", () => {
+    // trigger V20 gate refresh if exists
+    if (typeof window.__rb_refreshGate === "function") window.__rb_refreshGate();
+  });
+
+  // ----- carryover (previous shift NOK for same vehicle) -----
+  function readHistory(){
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); } catch { return []; }
+  }
+
+  function lastShiftForVehicle(spz){
+    if (!spz) return null;
+    const h = readHistory();
+    for (let i=h.length-1;i>=0;i--) {
+      if ((h[i].vehicle||"").trim() === spz.trim()) return h[i];
+    }
+    return null;
+  }
+
+  function computeNokFromPayload(payload){
+    const nok = [];
+    if (!payload?.checks) return nok;
+    for (const [k, obj] of Object.entries(payload.checks)){
+      for (const [id, v] of Object.entries(obj || {})){
+        if (v === "nok"){
+          const note = payload.notes?.[k]?.[id] || "";
+          // find title
+          const it = (lists[k]||[]).find(x => x.id === id);
+          const title = it ? it.t : id;
+          const group = (k === "post") ? "Po směně" : "Před směnou";
+          nok.push({ k, id, title, group, note });
+        }
+      }
+    }
+    return nok;
+  }
+
+  function renderCarryover(nokList){
+    const box = $("carryoverBox");
+    const list = $("carryoverList");
+    if (!box || !list) return;
+    if (!nokList.length){
+      box.hidden = true;
+      list.innerHTML = "";
+      return;
+    }
+    box.hidden = false;
+    list.innerHTML = nokList.map((x,idx)=>`
+      <div class="carryoverItem">
+        <span class="tag">✕ ${
+          escapeHtml(x.group)
+        }</span>
+        <div class="txt">
+          <div><strong>${escapeHtml(x.title)}</strong></div>
+          <div class="small" style="opacity:.85">${x.note ? escapeHtml(x.note) : "bez popisu"}</div>
+        </div>
+        <div class="carryoverBtns">
+          <button class="carryBtn nok" data-carry="nok" data-k="${x.k}" data-id="${x.id}">Stále trvá</button>
+          <button class="carryBtn ok" data-carry="ok" data-k="${x.k}" data-id="${x.id}">Vyřešeno</button>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  function applyCarryState(k,id,state){
+    // set state and prefill note
+    setState(k,id,state);
+    if (state === "nok"){
+      const existing = (getNote(k,id)||"").trim();
+      if (!existing) setNote(k,id,"převzato – doplň detail");
+    } else {
+      // keep note empty
+      setNote(k,id,"");
+    }
+    // rerender list cards in UI (existing renderLists is used in app.js; call renderAll if exists)
+    if (typeof renderLists === "function") renderLists();
+    if (typeof window.__rb_refreshGate === "function") window.__rb_refreshGate();
+  }
+
+  document.addEventListener("click", (e)=>{
+    const btn = e.target?.closest?.("[data-carry]");
+    if (!btn) return;
+    e.preventDefault();
+    const k = btn.getAttribute("data-k");
+    const id = btn.getAttribute("data-id");
+    const st = btn.getAttribute("data-carry");
+    applyCarryState(k,id,st);
+  });
+
+  function refreshCarryover(){
+    const spz = ($("vehicle")?.value || "").trim();
+    const taken = ($("takenFrom")?.value || "").trim();
+    // show only if takenFrom chosen (responsibility)
+    if (!spz || !taken){
+      renderCarryover([]);
+      return;
+    }
+    const last = lastShiftForVehicle(spz);
+    if (!last){ renderCarryover([]); return; }
+    const nok = computeNokFromPayload(last);
+    renderCarryover(nok);
+  }
+
+  // Refresh carryover when SPZ or takenFrom changes
+  ["vehicle","takenFrom"].forEach(id => {
+    $(id)?.addEventListener("change", refreshCarryover);
+    $(id)?.addEventListener("input", refreshCarryover);
+  });
+
+  // ----- integrate with v20 gate -----
+  // wrap/override the v20 refreshGate by attaching hook used above
+  if (typeof window.__rb_refreshGate !== "function"){
+    // v20 did not expose it; we create one by calling internal gate state recompute
+    // We'll rely on button disabled state by triggering input events; but also define a minimal one:
+    window.__rb_refreshGate = function(){}; 
+  }
+  const prevRefresh = window.__rb_refreshGate;
+  window.__rb_refreshGate = function(){
+    try { prevRefresh(); } catch {}
+    // Critical gate: if critical NOK exists, require acknowledgement, else disable submit
+    const critState = refreshCriticalBox();
+    const enable = critState.ok;
+    if (!enable){
+      $("btnSubmit") && ($("btnSubmit").disabled = true);
+      $("barSubmit") && ($("barSubmit").disabled = true);
+    }
+  }
+
+  // also run on any change
+  document.addEventListener("click", (e)=>{
+    if (e.target?.classList?.contains("stateBtn")) window.__rb_refreshGate();
+  });
+  document.addEventListener("input", ()=> window.__rb_refreshGate());
+
+  // initial
+  refreshCarryover();
+  window.__rb_refreshGate();
+})();

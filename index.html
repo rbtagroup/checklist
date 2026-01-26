@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="styles.css?v=20" />
+  <link rel="stylesheet" href="styles.css?v=21" />
 </head>
 <body>
   <header class="topbar">
@@ -18,7 +18,7 @@
       <div class="logo">RB</div>
       <div>
         <div class="title">RB Taxi</div>
-        <div class="subtitle">Denní mobilní checklist <span id="verBadge" class="verBadge">v20</span></div>
+        <div class="subtitle">Denní mobilní checklist <span id="verBadge" class="verBadge">v21</span></div>
       </div>
     </div>
     <button id="installBtn" class="btn ghost" hidden>Přidat na plochu</button>
@@ -91,6 +91,12 @@
         <option value="Jakub">
         <option value="Lukáš">
       </datalist>
+
+      <div class="carryoverBox" id="carryoverBox" hidden>
+        <div class="carryoverTitle">📌 Převzaté závady z minulé směny</div>
+        <div class="carryoverSub">Závady se přenesou podle poslední odeslané směny pro stejné auto. U ✕ doplň popis.</div>
+        <div class="carryoverList" id="carryoverList"></div>
+      </div>
 </section>
 
     <!-- PŘED SMĚNOU -->
@@ -153,7 +159,13 @@
         <textarea id="incident" placeholder="Nehoda / konflikt / kontrola / ztracené věci… stručně a jasně"></textarea>
       </label>
 
-      <div class="actions">
+      
+      <div class="criticalBox" id="criticalBox" hidden>
+        <div class="criticalTitle">🛑 KRITICKÁ ZÁVADA</div>
+        <div class="criticalText" id="criticalText"></div>
+        <label class="criticalAck"><input type="checkbox" id="criticalAck"> Potvrzuji, že vozidlo je odstaveno / nejede do provozu.</label>
+      </div>
+<div class="actions">
         <button class="btn" id="btnSubmit">ODESLAT & UKONČIT SMĚNU</button>
         <button class="btn ghost" id="btnSave2">Uložit rozpracované</button>
       </div>
@@ -197,7 +209,7 @@
   </div>
 
 
-  <script src="app.js?v=20"></script>
+  <script src="app.js?v=21"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));

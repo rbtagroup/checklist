@@ -314,3 +314,55 @@ input, textarea, select{ font-size: 16px; }
   cursor: not-allowed;
 }
 .btn[disabled]:hover{ transform:none; }
+
+.carryoverBox{
+  margin-top: 12px;
+  padding: 12px 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(59,130,246,.25);
+  background: rgba(59,130,246,.08);
+  font-size: 13px;
+}
+.carryoverTitle{ font-weight: 900; margin-bottom: 6px; }
+.carryoverSub{ opacity:.85; margin-bottom: 8px; font-size:12px; }
+.carryoverItem{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  padding:8px 10px;
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  margin:6px 0;
+}
+.carryoverItem .tag{
+  padding:2px 8px; border-radius:999px; font-size:11px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  white-space:nowrap;
+}
+.carryoverItem .txt{ flex:1; }
+.carryoverBtns{ display:flex; gap:6px; }
+.carryBtn{
+  padding:6px 10px;
+  border-radius: 12px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  font-weight:800;
+  font-size:12px;
+}
+.carryBtn.ok{ background: rgba(34,197,94,.14); border-color: rgba(34,197,94,.25); }
+.carryBtn.nok{ background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.25); }
+.criticalBox{
+  margin: 10px 0 10px;
+  padding: 12px 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(239,68,68,.40);
+  background: rgba(239,68,68,.12);
+}
+.criticalTitle{ font-weight: 1000; letter-spacing:.3px; margin-bottom:6px; }
+.criticalText{ font-size: 13px; line-height:1.35; margin-bottom:8px; }
+.criticalAck{ font-size: 13px; display:flex; gap:10px; align-items:flex-start; }
+@media print{
+  .criticalBox{ border-color: rgba(239,68,68,.75) !important; background: rgba(239,68,68,.18) !important; }
+}
