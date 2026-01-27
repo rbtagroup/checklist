@@ -1334,3 +1334,118 @@ $("btnClear")?.addEventListener("click", () => {
   apiPing();
   window.addEventListener("online", ()=> syncOnce());
 })();
+
+/* RB_V23_2_PHOTO_FIX */
+(function(){
+  const MAX_W=1200, MAX_H=1200, JPG_Q=0.7;
+  const PHOTO_STORE="photos2";
+  const REQUIRED_PHOTO_IDS=new Set(["clean_out","clean_in","lights"]);
+  const DB_NAME="rb_checklist_db_v23"; const DB_VER=2;
+
+  function openDB(){
+    return new Promise((res,rej)=>{
+      const r=indexedDB.open(DB_NAME,DB_VER);
+      r.onupgradeneeded=()=>{
+        const db=r.result;
+        if(!db.objectStoreNames.contains(PHOTO_STORE)){
+          db.createObjectStore(PHOTO_STORE,{keyPath:"key"});
+        }
+      };
+      r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+    });
+  }
+  async function putPhoto(rec){
+    const db=await openDB();
+    return new Promise((res,rej)=>{
+      const tx=db.transaction(PHOTO_STORE,"readwrite");
+      tx.objectStore(PHOTO_STORE).put(rec);
+      tx.oncomplete=()=>res(true); tx.onerror=()=>rej(tx.error);
+    });
+  }
+  async function getPhoto(key){
+    const db=await openDB();
+    return new Promise((res,rej)=>{
+      const tx=db.transaction(PHOTO_STORE,"readonly");
+      const q=tx.objectStore(PHOTO_STORE).get(key);
+      q.onsuccess=()=>res(q.result||null); q.onerror=()=>rej(q.error);
+    });
+  }
+
+  function ensureCamUI(){
+    document.querySelectorAll(".check").forEach(ch=>{
+      const id=ch.getAttribute("data-id");
+      if(!id||!REQUIRED_PHOTO_IDS.has(id)) return;
+      if(ch.querySelector(".camBtn")) return;
+      const btn=document.createElement("button");
+      btn.type="button"; btn.className="camBtn"; btn.textContent="📷 Přidat foto (povinné při ✕)";
+      const img=document.createElement("img"); img.className="photoPrev"; img.hidden=true;
+      btn.onclick=()=>pickPhoto(id,img);
+      ch.appendChild(btn); ch.appendChild(img);
+    });
+  }
+
+  function pickPhoto(itemId, img){
+    const inp=document.createElement("input");
+    inp.type="file"; inp.accept="image/*";
+    inp.onchange=async ()=>{
+      const f=inp.files&&inp.files[0]; if(!f) return;
+      const bmp=await createImageBitmap(f);
+      const c=document.createElement("canvas");
+      let w=bmp.width,h=bmp.height;
+      const r=Math.min(MAX_W/w, MAX_H/h, 1);
+      w=Math.round(w*r); h=Math.round(h*r);
+      c.width=w; c.height=h;
+      const ctx=c.getContext("2d"); ctx.drawImage(bmp,0,0,w,h);
+      const data=c.toDataURL("image/jpeg",JPG_Q);
+      const b64=data.split(",")[1];
+      await putPhoto({key:itemId, type:"image/jpeg", data:b64});
+      img.src=data; img.hidden=false;
+      if(window.__rb_refreshGate) window.__rb_refreshGate();
+    };
+    inp.click();
+  }
+
+  async function missingPhotos(){
+    const miss=[];
+    for(const id of REQUIRED_PHOTO_IDS){
+      let isNok=false;
+      for(const [k,arr] of Object.entries(lists)){
+        if((arr||[]).some(x=>x.id===id) && getState(k,id)==="nok"){ isNok=true; }
+      }
+      if(isNok){
+        const p=await getPhoto(id);
+        if(!p) miss.push(id);
+      }
+    }
+    return miss;
+  }
+
+  const prevGate=window.__rb_refreshGate;
+  window.__rb_refreshGate=async function(){
+    if(prevGate) try{await prevGate();}catch{}
+    const miss=await missingPhotos();
+    if(miss.length){
+      const hint=document.getElementById("submitHint");
+      if(hint){
+        hint.hidden=false;
+        hint.innerHTML='<strong>Nelze odeslat:</strong><br><span class="errText">Chybí foto:</span> '+miss.join(", ");
+      }
+      const b=document.getElementById("btnSubmit"); if(b) b.disabled=true;
+      const b2=document.getElementById("barSubmit"); if(b2) b2.disabled=true;
+    }
+  };
+
+  const origCreate=window.createPayload;
+  window.createPayload=async function(){
+    const p=origCreate?await origCreate():{};
+    const photos=[];
+    for(const id of REQUIRED_PHOTO_IDS){
+      const ph=await getPhoto(id);
+      if(ph) photos.push({itemId:id, type:ph.type, data:ph.data, name:id+".jpg"});
+    }
+    p.photos=(p.photos||[]).concat(photos);
+    return p;
+  };
+
+  ensureCamUI();
+})();
